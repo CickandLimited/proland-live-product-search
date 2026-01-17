@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ProLand Live Product Search
  * Description: Front-end live (typeahead) search for WooCommerce products by name + description. Use shortcode [proland_live_product_search].
- * Version: 2.0.0
+ * Version: 2.0.1
  * Author: Kris Rabai Veritium Support Services
  * License: GPLv2 or later
  */

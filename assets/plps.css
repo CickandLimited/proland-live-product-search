@@ -1,13 +1,40 @@
+/* ProLand Live Product Search — theme-aligned styles
+   - Uses WP preset variables with sensible fallbacks
+   - Avoids hard-coded colours where possible
+*/
+
 .plps {
   position: relative;
-  max-width: 720px;
+  width: 100%;
+  max-width: 100%;
+
+  /* Theme-driven tokens with fallbacks */
+  --plps-text: var(--wp--preset--color--contrast, #111);
+  --plps-muted: var(--wp--preset--color--contrast-2, rgba(17, 17, 17, 0.75));
+  --plps-surface: var(--wp--preset--color--base, #fff);
+  --plps-surface-2: var(--wp--preset--color--tertiary, #f3f4f6);
+  --plps-border: rgba(0, 0, 0, 0.14);
+  --plps-border-strong: rgba(0, 0, 0, 0.24);
+  --plps-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+
+  --plps-radius: var(--wp--custom--border-radius, 12px);
+  --plps-radius-lg: calc(var(--plps-radius) + 2px);
+
+  --plps-font-size: var(--wp--preset--font-size--medium, 16px);
+  --plps-font-size-sm: var(--wp--preset--font-size--small, 14px);
+
+  /* Use theme’s primary as the focus colour when possible */
+  --plps-focus: var(--wp--preset--color--primary, #629124);
+  --plps-focus-ring: color-mix(in srgb, var(--plps-focus) 25%, transparent);
 }
 
 .plps__label {
   display: block;
-  font-size: 14px;
-  margin-bottom: 6px;
-  color: #000;
+  margin: 0 0 6px 0;
+  color: var(--plps-text);
+  font-size: var(--plps-font-size-sm);
+  line-height: 1.3;
+  font-weight: 500;
 }
 
 .plps__inputWrap {
@@ -16,27 +43,47 @@
 
 .plps__input {
   width: 100%;
-  padding: 12px 40px 12px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.15);
-  background: #fff;
+  font: inherit;
+  font-size: var(--plps-font-size);
+  line-height: 1.3;
+  color: var(--plps-text);
+
+  padding: 12px 44px 12px 14px;
+
+  background: var(--plps-surface);
+  border: 1px solid var(--plps-border);
+  border-radius: var(--plps-radius);
+
+  /* Try to match modern block theme inputs */
+  box-shadow: none;
   outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.plps__input::placeholder {
+  color: color-mix(in srgb, var(--plps-muted) 70%, transparent);
 }
 
 .plps__input:focus {
-  border-color: rgba(0,0,0,0.35);
+  border-color: color-mix(in srgb, var(--plps-focus) 55%, var(--plps-border-strong));
+  box-shadow: 0 0 0 4px var(--plps-focus-ring);
+}
+
+.plps__input:disabled {
+  opacity: 0.7;
+  background: var(--plps-surface-2);
 }
 
 .plps__spinner {
   position: absolute;
-  right: 12px;
+  right: 14px;
   top: 50%;
   width: 16px;
   height: 16px;
-  border-radius: 50%;
+  border-radius: 999px;
   transform: translateY(-50%);
-  border: 2px solid rgba(0,0,0,0.15);
-  border-top-color: rgba(0,0,0,0.5);
+  border: 2px solid color-mix(in srgb, var(--plps-muted) 20%, transparent);
+  border-top-color: color-mix(in srgb, var(--plps-muted) 70%, transparent);
   opacity: 0;
   pointer-events: none;
   animation: plpsSpin 0.9s linear infinite;
@@ -50,25 +97,31 @@
   to { transform: translateY(-50%) rotate(360deg); }
 }
 
+/* Results dropdown */
 .plps__results {
   position: absolute;
   z-index: 9999;
   left: 0;
   right: 0;
-  margin-top: 8px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.12);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  margin-top: 10px;
+
+  background: var(--plps-surface);
+  border: 1px solid var(--plps-border);
+  border-radius: var(--plps-radius-lg);
+  box-shadow: var(--plps-shadow);
   overflow: hidden;
 }
 
+/* Items */
 .plps__item {
   display: block;
-  padding: 12px 12px;
+  padding: 12px 14px;
+
   text-decoration: none;
-  color: inherit;
-  border-top: 1px solid rgba(0,0,0,0.06);
+  color: var(--plps-text);
+
+  border-top: 1px solid color-mix(in srgb, var(--plps-border) 55%, transparent);
+  transition: background-color 120ms ease;
 }
 
 .plps__item:first-child {
@@ -77,29 +130,54 @@
 
 .plps__item:hover,
 .plps__item.is-active {
-  background: rgba(0,0,0,0.04);
+  background: var(--plps-surface-2);
 }
 
 .plps__itemTitle {
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
+  font-size: var(--plps-font-size);
 }
 
 .plps__itemSnippet {
   margin-top: 4px;
-  font-size: 13px;
-  opacity: 0.8;
-  line-height: 1.25;
+  font-size: var(--plps-font-size-sm);
+  line-height: 1.3;
+  color: var(--plps-muted);
 }
 
+/* Empty state */
 .plps__empty {
-  padding: 12px;
-  font-size: 14px;
-  opacity: 0.8;
+  padding: 12px 14px;
+  font-size: var(--plps-font-size-sm);
+  color: var(--plps-muted);
+  background: var(--plps-surface);
 }
 
+/* Live region status */
 .plps__status {
   margin-top: 8px;
-  font-size: 13px;
-  opacity: 0.8;
+  font-size: var(--plps-font-size-sm);
+  color: var(--plps-muted);
+}
+
+/* Small screen tweaks */
+@media (max-width: 480px) {
+  .plps__input {
+    padding: 12px 42px 12px 12px;
+  }
+  .plps__item {
+    padding: 12px;
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .plps__input,
+  .plps__item {
+    transition: none;
+  }
+  .plps__spinner {
+    animation: none;
+  }
 }
