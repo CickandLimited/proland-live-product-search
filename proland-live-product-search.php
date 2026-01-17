@@ -2,10 +2,11 @@
 /**
  * Plugin Name: ProLand Live Product Search
  * Description: Front-end live (typeahead) search for WooCommerce products by name + description. Use shortcode [proland_live_product_search].
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Kris Rabai Veritium Support Services
  * License: GPLv2 or later
  */
+
 
 if (!defined('ABSPATH')) exit;
 
@@ -30,7 +31,7 @@ final class ProLand_Live_Product_Search {
             self::SCRIPT_HANDLE,
             $url . 'assets/plps.js',
             [],
-            '1.0.1',
+            '1.0.2',
             true
         );
 
@@ -43,7 +44,6 @@ final class ProLand_Live_Product_Search {
     }
 
     public static function render_shortcode($atts): string {
-        // Enqueue only when shortcode is used
         wp_enqueue_script(self::SCRIPT_HANDLE);
         wp_enqueue_style(self::STYLE_HANDLE);
 
@@ -56,22 +56,27 @@ final class ProLand_Live_Product_Search {
         $limit     = max(1, min(20, (int)$atts['limit']));
         $min_chars = max(1, min(10, (int)$atts['min_chars']));
 
-        // Ensure config exists BEFORE plps.js runs (robust vs caching/minify ordering)
-        $config = [
-            'ajaxUrl'  => admin_url('admin-ajax.php'),
-            'nonce'    => wp_create_nonce(self::NONCE_ACTION),
-            'limit'    => $limit,
-            'minChars' => $min_chars,
-        ];
-
-        $inline = 'window.PLPS = window.PLPS || ' . wp_json_encode($config) . ';';
-        wp_add_inline_script(self::SCRIPT_HANDLE, $inline, 'before');
-
-        $placeholder = esc_attr($atts['placeholder']);
         $uid = 'plps-' . wp_generate_uuid4();
 
+        $data = [
+            'ajax_url'  => admin_url('admin-ajax.php'),
+            'nonce'     => wp_create_nonce(self::NONCE_ACTION),
+            'limit'     => (string)$limit,
+            'min_chars' => (string)$min_chars,
+        ];
+
+        $placeholder = esc_attr($atts['placeholder']);
+
         ob_start(); ?>
-        <div class="plps" data-plps id="<?php echo esc_attr($uid); ?>">
+        <div
+            class="plps"
+            data-plps
+            data-plps-ajax-url="<?php echo esc_attr($data['ajax_url']); ?>"
+            data-plps-nonce="<?php echo esc_attr($data['nonce']); ?>"
+            data-plps-limit="<?php echo esc_attr($data['limit']); ?>"
+            data-plps-min-chars="<?php echo esc_attr($data['min_chars']); ?>"
+            id="<?php echo esc_attr($uid); ?>"
+        >
             <label class="plps__label" for="<?php echo esc_attr($uid); ?>-input">Product search</label>
 
             <div class="plps__inputWrap">
@@ -121,12 +126,11 @@ final class ProLand_Live_Product_Search {
             wp_send_json_success(['items' => []]);
         }
 
-        // WP 's' searches title + content + excerpt (covers name + descriptions)
         $q = new WP_Query([
             'post_type'           => 'product',
             'post_status'         => 'publish',
             'posts_per_page'      => $limit,
-            's'                   => $term,
+            's'                   => $term, // searches title + content + excerpt
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
             'orderby'             => 'relevance',
@@ -137,7 +141,6 @@ final class ProLand_Live_Product_Search {
         foreach ($q->posts as $product_id) {
             $product = wc_get_product($product_id);
             if (!$product) continue;
-
             if (!$product->is_visible()) continue;
 
             $title = get_the_title($product_id);

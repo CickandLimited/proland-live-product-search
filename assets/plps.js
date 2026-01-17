@@ -1,13 +1,4 @@
 (() => {
-  const cfg = window.PLPS || {};
-
-  // If config didn't get injected for any reason, fail gracefully (no console fatal)
-  if (!cfg.ajaxUrl || !cfg.nonce) {
-    // Optional: uncomment if you want a hint in console
-    // console.warn("[PLPS] Missing config (ajaxUrl/nonce). Inline script may be blocked by optimisation plugin.");
-    return;
-  }
-
   const debounce = (fn, wait = 250) => {
     let t = null;
     return (...args) => {
@@ -92,13 +83,34 @@
     openResults(root);
   };
 
+  const readCfg = (root) => {
+    const ajaxUrl = root.getAttribute("data-plps-ajax-url") || "";
+    const nonce = root.getAttribute("data-plps-nonce") || "";
+    const limit = Number(root.getAttribute("data-plps-limit") || "8");
+    const minChars = Number(root.getAttribute("data-plps-min-chars") || "2");
+
+    return {
+      ajaxUrl,
+      nonce,
+      limit: Number.isFinite(limit) ? limit : 8,
+      minChars: Number.isFinite(minChars) ? minChars : 2,
+    };
+  };
+
   const initOne = (root) => {
+    if (root.dataset.plpsInit === "1") return;
+    root.dataset.plpsInit = "1";
+
+    const cfg = readCfg(root);
     const input = root.querySelector(".plps__input");
     const results = root.querySelector(".plps__results");
 
+    if (!cfg.ajaxUrl || !cfg.nonce) {
+      setStatus(root, "Search config missing (likely caching/minify stripping).");
+      return;
+    }
+
     let activeIndex = -1;
-    const minChars = Number(cfg.minChars ?? 2);
-    const limit = Number(cfg.limit ?? 8);
 
     const focusItem = (idx) => {
       const items = results.querySelectorAll(".plps__item");
@@ -116,8 +128,8 @@
     const doSearch = debounce(async () => {
       const term = (input.value || "").trim();
 
-      if (term.length < minChars) {
-        setStatus(root, term.length ? `Type ${minChars - term.length} more character(s)…` : "");
+      if (term.length < cfg.minChars) {
+        setStatus(root, term.length ? `Type ${cfg.minChars - term.length} more character(s)…` : "");
         closeResults(root);
         return;
       }
@@ -130,7 +142,7 @@
           action: "plps_search_products",
           nonce: cfg.nonce,
           term,
-          limit: String(limit),
+          limit: String(cfg.limit),
         });
 
         if (!json || !json.success) {
@@ -139,11 +151,12 @@
           return;
         }
 
-        renderItems(root, json.data.items || []);
-        setStatus(root, `${(json.data.items || []).length} result(s).`);
+        const items = (json.data && json.data.items) ? json.data.items : [];
+        renderItems(root, items);
+        setStatus(root, `${items.length} result(s).`);
         activeIndex = -1;
       } catch (e) {
-        setStatus(root, "Search failed.");
+        setStatus(root, "Search failed (network/server).");
         closeResults(root);
       } finally {
         setLoading(root, false);
@@ -186,7 +199,17 @@
     });
   };
 
-  document.addEventListener("DOMContentLoaded", () => {
+  const initAll = () => {
     document.querySelectorAll("[data-plps]").forEach(initOne);
-  });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAll);
+  } else {
+    initAll();
+  }
+
+  // Handle blocks injected later
+  const mo = new MutationObserver(() => initAll());
+  mo.observe(document.documentElement, { childList: true, subtree: true });
 })();
