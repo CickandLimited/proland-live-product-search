@@ -181,3 +181,19 @@
     animation: none;
   }
 }
+.plps__meta {
+  margin-top: 4px;
+  font-size: var(--wp--preset--font-size--small, 14px);
+  color: var(--plps-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.plps__availability {
+  font-weight: 600;
+}
+
+.plps__item.is-out .plps__availability {
+  color: #b42318;
+}
