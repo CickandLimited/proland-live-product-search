@@ -1,0 +1,50 @@
+# =========================
+# Node / build tooling
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# WordPress build cache
+.cache/
+.parcel-cache/
+
+# =========================
+# OS / editor noise
+# =========================
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains
+.idea/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# =========================
+# Environment / secrets
+# =========================
+.env
+.env.*
+
+# =========================
+# Optional: lockfiles policy
+# =========================
+# Uncomment ONE strategy only
+
+# If this is a shared plugin repo (recommended):
+# package-lock.json
+
+# If this is a personal / single-dev repo:
+# (leave package-lock.json tracked)
