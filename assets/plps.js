@@ -1,4 +1,13 @@
 (() => {
+  const cfg = window.PLPS || {};
+
+  // If config didn't get injected for any reason, fail gracefully (no console fatal)
+  if (!cfg.ajaxUrl || !cfg.nonce) {
+    // Optional: uncomment if you want a hint in console
+    // console.warn("[PLPS] Missing config (ajaxUrl/nonce). Inline script may be blocked by optimisation plugin.");
+    return;
+  }
+
   const debounce = (fn, wait = 250) => {
     let t = null;
     return (...args) => {
@@ -88,8 +97,8 @@
     const results = root.querySelector(".plps__results");
 
     let activeIndex = -1;
-    const minChars = Number(PLPS?.minChars ?? 2);
-    const limit = Number(PLPS?.limit ?? 8);
+    const minChars = Number(cfg.minChars ?? 2);
+    const limit = Number(cfg.limit ?? 8);
 
     const focusItem = (idx) => {
       const items = results.querySelectorAll(".plps__item");
@@ -117,9 +126,9 @@
       setStatus(root, "Searching…");
 
       try {
-        const json = await postJSON(PLPS.ajaxUrl, {
+        const json = await postJSON(cfg.ajaxUrl, {
           action: "plps_search_products",
-          nonce: PLPS.nonce,
+          nonce: cfg.nonce,
           term,
           limit: String(limit),
         });
@@ -143,7 +152,6 @@
 
     input.addEventListener("input", () => doSearch());
 
-    // Keyboard navigation
     input.addEventListener("keydown", (e) => {
       const items = results.querySelectorAll(".plps__item");
       const isOpen = !results.hidden;
@@ -169,12 +177,10 @@
       }
     });
 
-    // Close when clicking outside
     document.addEventListener("click", (e) => {
       if (!root.contains(e.target)) closeResults(root);
     });
 
-    // If user focuses input again, reopen if it has content and results exist
     input.addEventListener("focus", () => {
       if (results.innerHTML.trim() !== "" && results.hidden) openResults(root);
     });

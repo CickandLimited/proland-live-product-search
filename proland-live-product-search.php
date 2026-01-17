@@ -10,15 +10,15 @@
 if (!defined('ABSPATH')) exit;
 
 final class ProLand_Live_Product_Search {
-    const SHORTCODE = 'proland_live_product_search';
-    const NONCE_ACTION = 'plps_search_nonce';
+    const SHORTCODE     = 'proland_live_product_search';
+    const NONCE_ACTION  = 'plps_search_nonce';
+    const SCRIPT_HANDLE = 'plps-js';
+    const STYLE_HANDLE  = 'plps-css';
 
     public static function init(): void {
         add_shortcode(self::SHORTCODE, [__CLASS__, 'render_shortcode']);
-
         add_action('wp_enqueue_scripts', [__CLASS__, 'register_assets']);
 
-        // AJAX for logged-in + guests
         add_action('wp_ajax_plps_search_products', [__CLASS__, 'ajax_search_products']);
         add_action('wp_ajax_nopriv_plps_search_products', [__CLASS__, 'ajax_search_products']);
     }
@@ -27,15 +27,15 @@ final class ProLand_Live_Product_Search {
         $url = plugin_dir_url(__FILE__);
 
         wp_register_script(
-            'plps-js',
+            self::SCRIPT_HANDLE,
             $url . 'assets/plps.js',
             [],
-            '1.0.0',
+            '1.0.1',
             true
         );
 
         wp_register_style(
-            'plps-css',
+            self::STYLE_HANDLE,
             $url . 'assets/plps.css',
             [],
             '1.0.0'
@@ -44,8 +44,8 @@ final class ProLand_Live_Product_Search {
 
     public static function render_shortcode($atts): string {
         // Enqueue only when shortcode is used
-        wp_enqueue_script('plps-js');
-        wp_enqueue_style('plps-css');
+        wp_enqueue_script(self::SCRIPT_HANDLE);
+        wp_enqueue_style(self::STYLE_HANDLE);
 
         $atts = shortcode_atts([
             'placeholder' => 'Search courses…',
@@ -53,15 +53,19 @@ final class ProLand_Live_Product_Search {
             'min_chars'   => 2,
         ], (array)$atts, self::SHORTCODE);
 
-        $limit = max(1, min(20, (int)$atts['limit']));
+        $limit     = max(1, min(20, (int)$atts['limit']));
         $min_chars = max(1, min(10, (int)$atts['min_chars']));
 
-        wp_localize_script('plps-js', 'PLPS', [
-            'ajaxUrl'   => admin_url('admin-ajax.php'),
-            'nonce'     => wp_create_nonce(self::NONCE_ACTION),
-            'limit'     => $limit,
-            'minChars'  => $min_chars,
-        ]);
+        // Ensure config exists BEFORE plps.js runs (robust vs caching/minify ordering)
+        $config = [
+            'ajaxUrl'  => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce(self::NONCE_ACTION),
+            'limit'    => $limit,
+            'minChars' => $min_chars,
+        ];
+
+        $inline = 'window.PLPS = window.PLPS || ' . wp_json_encode($config) . ';';
+        wp_add_inline_script(self::SCRIPT_HANDLE, $inline, 'before');
 
         $placeholder = esc_attr($atts['placeholder']);
         $uid = 'plps-' . wp_generate_uuid4();
@@ -95,11 +99,10 @@ final class ProLand_Live_Product_Search {
             <div class="plps__status" role="status" aria-live="polite"></div>
         </div>
         <?php
-        return (string)ob_get_clean();
+        return (string) ob_get_clean();
     }
 
     public static function ajax_search_products(): void {
-        // Basic hardening
         if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), self::NONCE_ACTION)) {
             wp_send_json_error(['message' => 'Invalid request.'], 403);
         }
@@ -111,28 +114,23 @@ final class ProLand_Live_Product_Search {
         $term  = isset($_POST['term']) ? sanitize_text_field(wp_unslash($_POST['term'])) : '';
         $limit = isset($_POST['limit']) ? (int) $_POST['limit'] : 8;
 
-        $term = trim($term);
+        $term  = trim($term);
         $limit = max(1, min(20, $limit));
 
-        if (mb_strlen($term) < 1) {
+        if ($term === '') {
             wp_send_json_success(['items' => []]);
         }
 
-        // Search products by title + content (long description) + excerpt (short description)
-        // WP's 's' search covers title/content/excerpt by default.
+        // WP 's' searches title + content + excerpt (covers name + descriptions)
         $q = new WP_Query([
-            'post_type'              => 'product',
-            'post_status'            => 'publish',
-            'posts_per_page'         => $limit,
-            's'                      => $term,
-            'no_found_rows'          => true,
-            'ignore_sticky_posts'    => true,
-            'orderby'                => 'relevance',
-            'fields'                 => 'ids',
-            'meta_query'             => [
-                // Hide out-of-stock if your catalogue does (optional). Comment out if not desired.
-                // ['key' => '_stock_status', 'value' => 'outofstock', 'compare' => '!='],
-            ],
+            'post_type'           => 'product',
+            'post_status'         => 'publish',
+            'posts_per_page'      => $limit,
+            's'                   => $term,
+            'no_found_rows'       => true,
+            'ignore_sticky_posts' => true,
+            'orderby'             => 'relevance',
+            'fields'              => 'ids',
         ]);
 
         $items = [];
@@ -140,12 +138,10 @@ final class ProLand_Live_Product_Search {
             $product = wc_get_product($product_id);
             if (!$product) continue;
 
-            // Respect catalogue visibility
             if (!$product->is_visible()) continue;
 
             $title = get_the_title($product_id);
 
-            // Combine excerpt + content for a meaningful snippet
             $short = (string) get_post_field('post_excerpt', $product_id);
             $long  = (string) get_post_field('post_content', $product_id);
             $raw   = $short !== '' ? $short : $long;
@@ -157,10 +153,10 @@ final class ProLand_Live_Product_Search {
             if ($snippet !== '' && mb_strlen($snippet) === 140) $snippet .= '…';
 
             $items[] = [
-                'id'       => $product_id,
-                'title'    => $title,
-                'snippet'  => $snippet,
-                'url'      => get_permalink($product_id),
+                'id'      => $product_id,
+                'title'   => $title,
+                'snippet' => $snippet,
+                'url'     => get_permalink($product_id),
             ];
         }
 
