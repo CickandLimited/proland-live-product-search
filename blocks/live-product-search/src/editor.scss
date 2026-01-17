@@ -1,0 +1,17 @@
+.plps-editor {
+  .plps-editor__fake {
+    opacity: 0.95;
+  }
+  .plps__input {
+    width: 100%;
+    padding: 12px 40px 12px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.15);
+    background: #fff;
+  }
+  .plps__status {
+    margin-top: 8px;
+    font-size: 13px;
+    opacity: 0.8;
+  }
+}

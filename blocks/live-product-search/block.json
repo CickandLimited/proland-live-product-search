@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 2,
+  "name": "proland/live-product-search",
+  "title": "ProLand: Live Product Search",
+  "category": "widgets",
+  "icon": "search",
+  "description": "Live WooCommerce product search (name + description) with instant results.",
+  "textdomain": "proland",
+  "supports": {
+    "html": false
+  },
+  "attributes": {
+    "placeholder": {
+      "type": "string",
+      "default": "Search courses…"
+    },
+    "limit": {
+      "type": "number",
+      "default": 8
+    },
+    "minChars": {
+      "type": "number",
+      "default": 2
+    }
+  },
+  "editorScript": "file:./build/index.js",
+  "editorStyle": "file:./build/index.css",
+  "style": []
+}

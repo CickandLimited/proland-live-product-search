@@ -1,0 +1,11 @@
+{
+  "name": "proland-live-product-search",
+  "private": true,
+  "scripts": {
+    "build": "wp-scripts build blocks/live-product-search/src/index.js --output-path=blocks/live-product-search/build",
+    "start": "wp-scripts start blocks/live-product-search/src/index.js --output-path=blocks/live-product-search/build"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.0.0"
+  }
+}

@@ -2,33 +2,29 @@
 /**
  * Plugin Name: ProLand Live Product Search
  * Description: Front-end live (typeahead) search for WooCommerce products by name + description. Use shortcode [proland_live_product_search].
- * Version: 1.2.0
+ * Version: 2.0.0
  * Author: Kris Rabai Veritium Support Services
  * License: GPLv2 or later
  */
 
-
 if (!defined('ABSPATH')) exit;
 
 final class ProLand_Live_Product_Search {
-    const SHORTCODE     = 'proland_live_product_search';
     const NONCE_ACTION  = 'plps_search_nonce';
-    const SCRIPT_HANDLE = 'plps-js';
-    const STYLE_HANDLE  = 'plps-css';
 
     public static function init(): void {
-        add_shortcode(self::SHORTCODE, [__CLASS__, 'render_shortcode']);
-        add_action('wp_enqueue_scripts', [__CLASS__, 'register_assets']);
+        add_action('init', [__CLASS__, 'register_block']);
+        add_action('wp_enqueue_scripts', [__CLASS__, 'register_frontend_assets']);
 
         add_action('wp_ajax_plps_search_products', [__CLASS__, 'ajax_search_products']);
         add_action('wp_ajax_nopriv_plps_search_products', [__CLASS__, 'ajax_search_products']);
     }
 
-    public static function register_assets(): void {
+    public static function register_frontend_assets(): void {
         $url = plugin_dir_url(__FILE__);
 
         wp_register_script(
-            self::SCRIPT_HANDLE,
+            'plps-frontend',
             $url . 'assets/plps.js',
             [],
             '1.0.2',
@@ -36,25 +32,33 @@ final class ProLand_Live_Product_Search {
         );
 
         wp_register_style(
-            self::STYLE_HANDLE,
+            'plps-frontend',
             $url . 'assets/plps.css',
             [],
             '1.0.0'
         );
     }
 
-    public static function render_shortcode($atts): string {
-        wp_enqueue_script(self::SCRIPT_HANDLE);
-        wp_enqueue_style(self::STYLE_HANDLE);
+    public static function register_block(): void {
+        $block_dir = __DIR__ . '/blocks/live-product-search';
 
-        $atts = shortcode_atts([
-            'placeholder' => 'Search courses…',
-            'limit'       => 8,
-            'min_chars'   => 2,
-        ], (array)$atts, self::SHORTCODE);
+        // Registers editor scripts/styles from block.json (build output)
+        register_block_type($block_dir, [
+            'render_callback' => [__CLASS__, 'render_block'],
+        ]);
+    }
 
-        $limit     = max(1, min(20, (int)$atts['limit']));
-        $min_chars = max(1, min(10, (int)$atts['min_chars']));
+    public static function render_block($attributes, $content, $block): string {
+        // Enqueue frontend assets only when block is actually rendered
+        wp_enqueue_script('plps-frontend');
+        wp_enqueue_style('plps-frontend');
+
+        $placeholder = isset($attributes['placeholder']) ? (string)$attributes['placeholder'] : 'Search courses…';
+        $limit       = isset($attributes['limit']) ? (int)$attributes['limit'] : 8;
+        $min_chars   = isset($attributes['minChars']) ? (int)$attributes['minChars'] : 2;
+
+        $limit     = max(1, min(20, $limit));
+        $min_chars = max(1, min(10, $min_chars));
 
         $uid = 'plps-' . wp_generate_uuid4();
 
@@ -65,7 +69,7 @@ final class ProLand_Live_Product_Search {
             'min_chars' => (string)$min_chars,
         ];
 
-        $placeholder = esc_attr($atts['placeholder']);
+        $placeholder = esc_attr($placeholder);
 
         ob_start(); ?>
         <div
@@ -130,7 +134,7 @@ final class ProLand_Live_Product_Search {
             'post_type'           => 'product',
             'post_status'         => 'publish',
             'posts_per_page'      => $limit,
-            's'                   => $term, // searches title + content + excerpt
+            's'                   => $term,
             'no_found_rows'       => true,
             'ignore_sticky_posts' => true,
             'orderby'             => 'relevance',
